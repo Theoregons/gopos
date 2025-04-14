@@ -38,11 +38,11 @@ func Register(c *gin.Context) {
 
 			switch tag {
 			case "required":
-				msg = fmt.Sprintf("field %s tidak boleh kosong", strings.ToLower(field))
+				msg = fmt.Sprintf("field %s cannot be empty", strings.ToLower(field))
 			case "email":
-				msg = "format email tidak valid"
+				msg = "format must be email"
 			case "min":
-				msg = "minimal password 6 karakter"
+				msg = "minimum password 6 characters"
 			}
 
 			utils.ResponseError(c, http.StatusBadRequest, msg)
@@ -67,10 +67,10 @@ func Register(c *gin.Context) {
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {
-		utils.ResponseError(c, http.StatusInternalServerError, "Email sudah digunakan")
+		utils.ResponseError(c, http.StatusInternalServerError, "Email already in use")
 		return
 	}
-	utils.ResponseSuccess(c, http.StatusCreated, "Register Sukses!")
+	utils.ResponseSuccess(c, http.StatusCreated, nil, "Register Sukses!")
 }
 
 func Login(c *gin.Context) {
@@ -99,5 +99,5 @@ func Login(c *gin.Context) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, _ := token.SignedString(middleware.JWT_SECRET)
 
-	utils.ResponseSuccess(c, http.StatusOK, tokenStr)
+	utils.ResponseSuccess(c, http.StatusOK, tokenStr, "ok")
 }

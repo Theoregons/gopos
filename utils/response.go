@@ -9,11 +9,18 @@ type PaginationMeta struct {
 	TotalPage   int   `json:"total_page"`
 }
 
-func ResponseSuccess(c *gin.Context, status int, data interface{}, pagination ...PaginationMeta) {
+func ResponseSuccess(c *gin.Context, status int, data interface{}, message string, pagination ...PaginationMeta) {
 
 	response := gin.H{
 		"success": true,
-		"data":    data,
+	}
+
+	if data != nil {
+		response["data"] = data
+	}
+
+	if message != "" {
+		response["message"] = message
 	}
 
 	if len(pagination) > 0 {

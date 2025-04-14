@@ -25,9 +25,14 @@ func GetProduct(c *gin.Context) {
 		query = query.Where("name LIKE ?", "%"+search+"%")
 	}
 
-	query.Offset((page - 1) * limit).Limit(limit).Find(&products)
-
 	totalPage := int((totalData + int64(limit) - 1) / int64(limit))
+
+	if page > totalPage {
+		utils.ResponseError(c, http.StatusNotFound, "halaman tidak ditemukan")
+		return
+	}
+
+	query.Offset((page - 1) * limit).Limit(limit).Find(&products)
 
 	meta := utils.PaginationMeta{
 		TotalData:   totalData,
@@ -36,7 +41,7 @@ func GetProduct(c *gin.Context) {
 		TotalPage:   totalPage,
 	}
 
-	utils.ResponseSuccess(c, http.StatusOK, products, meta)
+	utils.ResponseSuccess(c, http.StatusOK, products, "", meta)
 }
 
 func CreateProduct(c *gin.Context) {
@@ -57,7 +62,7 @@ func CreateProduct(c *gin.Context) {
 		return
 	}
 
-	utils.ResponseSuccess(c, http.StatusCreated, input)
+	utils.ResponseSuccess(c, http.StatusCreated, nil, "product added")
 }
 
 func UpdateProduct(c *gin.Context) {
@@ -72,10 +77,32 @@ func UpdateProduct(c *gin.Context) {
 	}
 
 	if err := config.DB.First(&product, id).Error; err != nil {
-		utils.ResponseError(c, http.StatusNotFound, "data product not found")
+		utils.ResponseError(c, http.StatusNotFound, "product not found")
+		return
 	}
 
 	config.DB.Model(&product).Updates(input)
 
-	utils.ResponseSuccess(c, http.StatusCreated, "product updated")
+	utils.ResponseSuccess(c, http.StatusCreated, nil, "product updated")
+}
+
+func DeleteProduct(c *gin.Context) {
+	id := c.Param("id")
+
+	var product entity.Product
+	var input entity.Product
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		utils.ResponseError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := config.DB.First(&product, id).Error; err != nil {
+		utils.ResponseError(c, http.StatusNotFound, "product not found")
+		return
+	}
+
+	config.DB.Model(&product).Delete(&product)
+	utils.ResponseSuccess(c, http.StatusAccepted, nil, "product deleted")
+
 }

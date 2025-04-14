@@ -14,4 +14,5 @@ func SetupUserRoutes(r *gin.RouterGroup) {
 	product.GET("", controller.GetProduct)
 	product.POST("", controller.CreateProduct)
 	product.PUT("/:id", controller.UpdateProduct)
+	product.DELETE("/:id", controller.DeleteProduct)
 }
