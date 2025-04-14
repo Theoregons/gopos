@@ -1,18 +1,17 @@
 package entity
 
 import (
-	"time"
+	"gorm.io/gorm"
 )
 
 type Transaction struct {
-	Id                uint
-	Invoice           string
-	Nama              string
-	Total_harga       int
-	Total_bayar       int
-	Total_kembalian   int
-	Metode_pembayaran string
-	User_id           uint
-	User              User `gorm:"foreignKey:User_id"`
-	Created_at        time.Time
+	gorm.Model
+	Invoice        string
+	Customer_name  string
+	Total_price    int
+	Total_payment  int
+	Total_change   int
+	Payment_method string
+	User_id        uint
+	User           User `gorm:"foreignKey:User_id"`
 }

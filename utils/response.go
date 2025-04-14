@@ -2,16 +2,30 @@ package utils
 
 import "github.com/gin-gonic/gin"
 
-func ResponseSuccess(c *gin.Context, status int, data interface{}) {
-	c.JSON(status, gin.H{
+type PaginationMeta struct {
+	TotalData   int64 `json:"total_data"`
+	Limit       int   `json:"limit"`
+	CurrentPage int   `json:"current_page"`
+	TotalPage   int   `json:"total_page"`
+}
+
+func ResponseSuccess(c *gin.Context, status int, data interface{}, pagination ...PaginationMeta) {
+
+	response := gin.H{
 		"success": true,
 		"data":    data,
-	})
+	}
+
+	if len(pagination) > 0 {
+		response["meta"] = pagination[0]
+	}
+
+	c.JSON(status, response)
 }
 
 func ResponseError(c *gin.Context, status int, message string) {
 	c.JSON(status, gin.H{
 		"success": false,
-		"error":   message,
+		"message": message,
 	})
 }

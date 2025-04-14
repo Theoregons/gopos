@@ -22,7 +22,7 @@ func Register(c *gin.Context) {
 	var input struct {
 		Name     string `json:"name" binding:"required"`
 		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
+		Password string `json:"password" binding:"required,min=6"`
 		Role     string `json:"role"`
 	}
 
@@ -41,7 +41,10 @@ func Register(c *gin.Context) {
 				msg = fmt.Sprintf("field %s tidak boleh kosong", strings.ToLower(field))
 			case "email":
 				msg = "format email tidak valid"
+			case "min":
+				msg = "minimal password 6 karakter"
 			}
+
 			utils.ResponseError(c, http.StatusBadRequest, msg)
 			return
 		}
@@ -89,7 +92,7 @@ func Login(c *gin.Context) {
 		return
 	}
 	claims := jwt.MapClaims{
-		"user_id": user.Id,
+		"user_id": user.ID,
 		"role":    user.Role,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	}

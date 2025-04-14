@@ -1,14 +1,13 @@
 package entity
 
 import (
-	"time"
+	"gorm.io/gorm"
 )
 
 type Product struct {
-	Id         uint `gorm:"primaryKey"`
-	Nama       string
-	Jenis      string
-	Stok       int
-	Harga      int
-	Created_at time.Time
+	gorm.Model
+	Name     string
+	Category string
+	Stock    int
+	Price    int
 }
