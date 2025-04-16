@@ -13,6 +13,7 @@ var JWT_SECRET = []byte("secretjwt")
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenStr := strings.Replace(c.GetHeader("Authorization"), "Bearer ", "", 1)
+
 		if tokenStr == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token required"})
 			return

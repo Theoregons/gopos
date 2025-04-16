@@ -10,81 +10,80 @@ import (
 )
 
 type ItemInput struct {
-	Id         uint `json:"product_id"`
-	Quantity   int  `json:"quantity"`
-	Unit_price int  `json:"harga_satuan"`
+	ProductID uint `json:"product_id"`
+	Quantity  int  `json:"quantity"`
+	UnitPrice int  `json:"harga_satuan"`
 }
 
 type TransactionInput struct {
-	Customer_name  string      `json:"customer_name"`
-	Payment_method string      `json:"payment_method"`
-	Total_payment  int         `json:"total_payment"`
-	Items          []ItemInput `json:"items"`
+	CustomerName  string      `json:"customer_name"`
+	PaymentMethod string      `json:"payment_method"`
+	TotalPayment  int         `json:"total_payment"`
+	Items         []ItemInput `json:"items"`
 }
 
 func CreateTransaction(c *gin.Context) {
 	var input TransactionInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.ResponseError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	var totalHarga int
+	var totalPrice int
 	var items []entity.TransactionItem
 
 	tx := config.DB.Begin()
 
 	for _, item := range input.Items {
 		var product entity.Product
-		if err := tx.First(&product, item.Id).Error; err != nil {
+		if err := tx.First(&product, item.ProductID).Error; err != nil {
 			tx.Rollback()
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Produk tidak ditemukan"})
+			utils.ResponseError(c, http.StatusNotFound, "product tidak ditemukan")
 			return
 		}
-
 		if product.Stock < item.Quantity {
 			tx.Rollback()
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Stok produk tidak cukup: " + product.Category})
+			utils.ResponseError(c, http.StatusBadRequest, `"stock product tidak cukup:" product.Name`)
 			return
 		}
 
-		// Kurangi stok
 		product.Stock -= item.Quantity
 		tx.Save(&product)
 
-		totalHarga += item.Quantity * item.Unit_price
+		totalPrice += item.Quantity * item.UnitPrice
 		items = append(items, entity.TransactionItem{
-			Product_id: item.Id,
+			Product_id: item.ProductID,
 			Quantity:   item.Quantity,
-			Unit_price: item.Unit_price,
+			Unit_price: item.UnitPrice,
 		})
 	}
-	c.JSON(http.StatusAccepted, input.Total_payment)
 
-	totalKembalian := input.Total_payment - totalHarga
-	if totalKembalian < 0 {
+	totalChange := input.TotalPayment - totalPrice
+
+	if totalChange < 0 {
 		tx.Rollback()
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Total bayar kurang dari total harga"})
+		utils.ResponseError(c, http.StatusBadRequest, "total bayar kurang dari total harga")
 		return
 	}
 
 	transaction := entity.Transaction{
-		Invoice:          "INV-" + utils.RandString(8),
-		Customer_name:    input.Customer_name,
-		Payment_method:   input.Payment_method,
-		Total_price:      totalHarga,
-		Total_payment:    input.Total_payment,
-		Total_change:     totalKembalian,
-		User_id:          1, //c.GetUint("user_id"),
+		Invoice:          "INV - " + utils.RandString(8),
+		Customer_name:    input.CustomerName,
+		Payment_method:   input.PaymentMethod,
+		Total_price:      totalPrice,
+		Total_payment:    input.TotalPayment,
+		Total_change:     totalChange,
+		User_id:          c.GetUint("user_id"),
 		TransactionItems: items,
 	}
 
 	if err := tx.Create(&transaction).Error; err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat transaksi"})
+		utils.ResponseError(c, http.StatusInternalServerError, "gagal membuat transaksi")
 		return
 	}
 
 	tx.Commit()
-	c.JSON(http.StatusCreated, transaction)
+	utils.ResponseSuccess(c, http.StatusCreated, transaction, "")
+
 }
