@@ -10,9 +10,11 @@ import (
 func SetupUserRoutes(r *gin.RouterGroup) {
 	product := r.Group("/products")
 	activity := r.Group("/activities")
+	report := r.Group("/reports")
 
 	product.Use(middleware.AuthMiddleware())
 	activity.Use(middleware.AuthMiddleware())
+	report.Use(middleware.AuthMiddleware())
 
 	r.POST("/register", controller.Register)
 	r.POST("/login", controller.Login)
@@ -22,5 +24,6 @@ func SetupUserRoutes(r *gin.RouterGroup) {
 	product.PUT("/:id", middleware.AdminOnly(), controller.UpdateProduct)
 	product.DELETE("/:id", middleware.AdminOnly(), controller.DeleteProduct)
 	activity.POST("", middleware.AdminOnly(), controller.CreateTransaction)
+	activity.GET("", middleware.AdminOnly(), controller.GetTransactions)
 
 }

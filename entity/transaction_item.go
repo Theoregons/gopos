@@ -7,5 +7,5 @@ type TransactionItem struct {
 	Unit_price     int
 	Quantity       int
 	Transaction_id uint
-	Transaction    Transaction `gorm:"foreignKey:Transaction_id"`
+	Transaction    Transaction `json:"-"`
 }

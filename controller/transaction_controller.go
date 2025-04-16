@@ -87,3 +87,18 @@ func CreateTransaction(c *gin.Context) {
 	utils.ResponseSuccess(c, http.StatusCreated, transaction, "")
 
 }
+
+func GetTransactions(c *gin.Context) {
+	var transactions []entity.Transaction
+	if err := config.DB.Preload("User").
+		Preload("TransactionItems").
+		Preload("TransactionItems.Product").
+		Order("created_at DESC").
+		Find(&transactions).Error; err != nil {
+
+		utils.ResponseError(c, http.StatusNotFound, "data tidak ditemukan")
+		return
+	}
+
+	utils.ResponseSuccess(c, http.StatusOK, transactions, "ok")
+}
