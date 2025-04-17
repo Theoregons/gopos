@@ -25,5 +25,7 @@ func SetupUserRoutes(r *gin.RouterGroup) {
 	product.DELETE("/:id", middleware.AdminOnly(), controller.DeleteProduct)
 	activity.POST("", middleware.AdminOnly(), controller.CreateTransaction)
 	activity.GET("", middleware.AdminOnly(), controller.GetTransactions)
+	activity.GET("/:id", middleware.AdminOnly(), controller.GetTransactionByID)
+	report.GET("", middleware.AdminOnly(), controller.GetReports)
 
 }
