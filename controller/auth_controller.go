@@ -4,18 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"pos/config"
-	"pos/entity"
-	"pos/middleware"
+	"pos/service"
 	"pos/utils"
 	"strings"
 
-	"time"
-
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func Register(c *gin.Context) {
@@ -52,24 +46,13 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	hashed, _ := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	_, err := service.RegisterUser(input.Name, input.Email, input.Password, input.Role)
 
-	role := input.Role
-	if role == "" {
-		role = "user"
-	}
-
-	user := entity.User{
-		Name:     input.Name,
-		Email:    input.Email,
-		Password: string(hashed),
-		Role:     role,
-	}
-
-	if err := config.DB.Create(&user).Error; err != nil {
-		utils.ResponseError(c, http.StatusInternalServerError, "Email already in use")
+	if err != nil {
+		utils.ResponseError(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	utils.ResponseSuccess(c, http.StatusCreated, nil, "Register Sukses!")
 }
 
@@ -78,26 +61,16 @@ func Login(c *gin.Context) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-	var user entity.User
 	if err := c.ShouldBindJSON(&input); err != nil {
 		utils.ResponseError(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
-		utils.ResponseError(c, http.StatusUnauthorized, "email atau password salah")
-		return
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
-		utils.ResponseError(c, http.StatusUnauthorized, "email atau password salah")
-		return
-	}
-	claims := jwt.MapClaims{
-		"user_id": user.ID,
-		"role":    user.Role,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenStr, _ := token.SignedString(middleware.JWT_SECRET)
 
-	utils.ResponseSuccess(c, http.StatusOK, tokenStr, "ok")
+	token, err := service.Login(input.Email, input.Password)
+	if err != nil {
+		utils.ResponseError(c, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	utils.ResponseSuccess(c, http.StatusOK, token, "login success")
 }
