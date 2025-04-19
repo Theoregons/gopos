@@ -27,5 +27,4 @@ func SetupUserRoutes(r *gin.RouterGroup) {
 	activity.GET("", middleware.AdminOnly(), controller.GetTransactions)
 	activity.GET("/:id", middleware.AdminOnly(), controller.GetTransactionByID)
 	report.GET("", middleware.AdminOnly(), controller.GetReports)
-
 }

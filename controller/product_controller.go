@@ -1,63 +1,60 @@
 package controller
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
-	"pos/config"
-	"pos/entity"
+	"pos/service"
 	"pos/utils"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
 
 func GetProduct(c *gin.Context) {
-	var products []entity.Product
-	var totalData int64
-
 	search := c.Query("search")
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	query := config.DB.Model(&entity.Product{})
-	query.Count(&totalData)
+	products, meta, err := service.GetProducts(search, limit, page)
 
-	if search != "" {
-		query = query.Where("name LIKE ?", "%"+search+"%")
-	}
-
-	totalPage := int((totalData + int64(limit) - 1) / int64(limit))
-
-	if page > totalPage {
-		utils.ResponseError(c, http.StatusNotFound, "halaman tidak ditemukan")
-		return
-	}
-
-	query.Offset((page - 1) * limit).Limit(limit).Find(&products)
-
-	meta := utils.PaginationMeta{
-		TotalData:   totalData,
-		Limit:       limit,
-		CurrentPage: page,
-		TotalPage:   totalPage,
+	if err != nil {
+		utils.ResponseError(c, http.StatusOK, err.Error())
 	}
 
 	utils.ResponseSuccess(c, http.StatusOK, products, "", meta)
 }
 
 func CreateProduct(c *gin.Context) {
-	var input entity.Product
+
+	var input service.ProductInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			e := ve[0]
+			field := e.Field()
+			tag := e.Tag()
+
+			var msg string
+
+			switch tag {
+			case "required":
+				msg = fmt.Sprintf("field %s cannot be empty", strings.ToLower(field))
+			case "min":
+				msg = "price and stock must be above 0"
+			}
+
+			utils.ResponseError(c, http.StatusBadRequest, msg)
+			return
+		}
 		utils.ResponseError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if input.Price < 0 || input.Stock < 0 {
-		utils.ResponseError(c, http.StatusBadRequest, "price and stock must be above 0 ")
-		return
-	}
-
-	if err := config.DB.Create(&input).Error; err != nil {
+	if err := service.CreateProduct(input); err != nil {
 		utils.ResponseError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -68,20 +65,17 @@ func CreateProduct(c *gin.Context) {
 func UpdateProduct(c *gin.Context) {
 	id := c.Param("id")
 
-	var product entity.Product
-	var input entity.Product
+	var input service.ProductInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		utils.ResponseError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := config.DB.First(&product, id).Error; err != nil {
-		utils.ResponseError(c, http.StatusNotFound, "product not found")
+	if err := service.UpdateProduct(id, input); err != nil {
+		utils.ResponseError(c, http.StatusNotFound, err.Error())
 		return
 	}
-
-	config.DB.Model(&product).Updates(input)
 
 	utils.ResponseSuccess(c, http.StatusCreated, nil, "product updated")
 }
@@ -89,20 +83,16 @@ func UpdateProduct(c *gin.Context) {
 func DeleteProduct(c *gin.Context) {
 	id := c.Param("id")
 
-	var product entity.Product
-	var input entity.Product
+	var input service.ProductInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		utils.ResponseError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := config.DB.First(&product, id).Error; err != nil {
-		utils.ResponseError(c, http.StatusNotFound, "product not found")
-		return
+	if err := service.DeleteProduct(id, input); err != nil {
+
 	}
 
-	config.DB.Model(&product).Delete(&product)
 	utils.ResponseSuccess(c, http.StatusAccepted, nil, "product deleted")
-
 }
